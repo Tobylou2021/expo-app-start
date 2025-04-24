@@ -1,112 +1,89 @@
-import React, { useState } from "react";
-import {
-  Text,
-  View,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  Alert,
-} from "react-native";
-import colors from "./colors";
-export default function Index() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const handleSignIn = () => {
-    if (email === "" || password === "") {
-      Alert.alert("Error", "Please fill in all fields");
-      return;
+import { StyleSheet, View, FlatList, ViewToken } from "react-native";
+import React, { useEffect } from "react";
+import Animated, {
+  useSharedValue,
+  useAnimatedScrollHandler,
+  useAnimatedRef,
+} from "react-native-reanimated";
+import data, { OnboardingData } from "../data/data";
+import Pagination from "../components/Pagination";
+import CustomButton from "../components/CustomButton";
+import RenderItem from "../components/RenderItem";
+import { useNavigation } from "@react-navigation/native";
+export default function Home() {
+  const flatListRef = useAnimatedRef<FlatList<OnboardingData>>();
+  const x = useSharedValue(0);
+  const flatListIndex = useSharedValue(0);
+
+  const navigation = useNavigation();
+
+  useEffect(() => {
+    navigation.setOptions({ headerShown: false });
+  }, [navigation]);
+
+  const onViewableItemsChanged = ({
+    viewableItems,
+  }: {
+    viewableItems: ViewToken[];
+  }) => {
+    if (viewableItems.length > 0 && viewableItems[0].index !== null) {
+      flatListIndex.value = viewableItems[0].index;
     }
-    Alert.alert("Success", "You have successfully logged in");
-    setEmail("");
-    setPassword("");
   };
+
+  const onScroll = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      x.value = event.contentOffset.x;
+    },
+  });
+
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>welcome to expo app start</Text>
-        <Text style={styles.subtitle}>login to your account</Text>
-      </View>
-      <View style={styles.form}>
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>input email</Text>
-          <TextInput
-            style={styles.inputBox}
-            placeholder="enter a email"
-            keyboardType="email-address"
-            value={email}
-            onChangeText={(text) => setEmail(text)}
-          />
-        </View>
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>input password</Text>
-          <TextInput
-            style={styles.inputBox}
-            placeholder="enter a passe"
-            secureTextEntry={true}
-            value={password}
-            onChangeText={(text) => setPassword(text)}
-          />
-        </View>
-        <TouchableOpacity style={styles.button} onPress={handleSignIn}>
-          <Text style={styles.buttonText}>login</Text>
-        </TouchableOpacity>
+      <Animated.FlatList
+        ref={flatListRef}
+        onScroll={onScroll}
+        data={data}
+        renderItem={({ item, index }) => {
+          return <RenderItem item={item} index={index} x={x} />;
+        }}
+        keyExtractor={(item) => item.id.toString()}
+        scrollEventThrottle={16}
+        horizontal={true}
+        bounces={false}
+        pagingEnabled={true}
+        showsHorizontalScrollIndicator={false}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={{
+          minimumViewTime: 300,
+          viewAreaCoveragePercentThreshold: 10,
+        }}
+      />
+      <View style={styles.bottomContainer}>
+        <Pagination data={data} x={x} />
+        <CustomButton
+          flatListRef={flatListRef}
+          flatListIndex={flatListIndex}
+          dataLength={data.length}
+          x={x}
+        />
       </View>
     </View>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
+  },
+  bottomContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: colors.background,
-  },
-  header: {
-    marginVertical: 25,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  form: {
-    marginVertical: 10,
-    marginHorizontal: 20,
-    width: "80%",
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "700",
-    marginBottom: 5,
-    color: colors.primary,
-  },
-  subtitle: {
-    fontSize: 15,
-    fontWeight: "400",
-  },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 15,
-    fontWeight: "500",
-    color: colors.dark,
-  },
-  inputBox: {
-    height: 50,
-    backgroundColor: colors.secondaryVariant,
-    paddingHorizontal: 10,
-    borderRadius: 5,
-    marginTop: 5,
-  },
-  button: {
-    backgroundColor: colors.primary,
-    height: 50,
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: 5,
-    marginTop: 10,
-  },
-  buttonText: {
-    color: colors.background,
-    fontWeight: "600",
-    fontSize: 15,
+    marginHorizontal: 30,
+    paddingVertical: 30,
+    position: "absolute",
+    bottom: 20,
+    left: 0,
+    right: 0,
   },
 });
